@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>SG Salary Tracker</title>
+  
+  <!-- For iOS Safari -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="SalarySG">
+  <link rel="apple-touch-icon" href="https://emojicdn.elk.sh/%F0%9F%92%B0?style=twitter">
+  
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 16px;
+      padding-bottom: 80px;
+    }
+    .container { max-width: 600px; margin: auto; }
+    .card {
+      background: white;
+      border-radius: 28px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .title { font-size: 1.3rem; font-weight: 600; margin-bottom: 16px; color: #1e3c72; }
+    .settings { display: flex; flex-wrap: wrap; gap: 12px; }
+    .setting-item { flex: 1; min-width: 100px; }
+    label { font-size: 0.7rem; color: #666; display: block; margin-bottom: 4px; }
+    input {
+      width: 100%; padding: 10px; font-size: 1rem;
+      border: 1px solid #ddd; border-radius: 20px; background: #fafafa;
+    }
+    .day-item {
+      background: #f9f9ff;
+      border-radius: 20px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border-left: 5px solid #1e88e5;
+    }
+    .day-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+    .day-date { font-weight: 600; font-size: 0.9rem; color: #1e3c72; }
+    .remove-day { background: #ffebee; border: none; border-radius: 30px; padding: 6px 14px; color: #c62828; cursor: pointer; font-size: 0.8rem; }
+    .day-controls { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; }
+    .ot-control, .food-control { display: flex; align-items: center; gap: 8px; background: #eef2fa; padding: 6px 12px; border-radius: 30px; }
+    .ot-control input { width: 70px; margin: 0; padding: 6px; font-size: 0.9rem; }
+    .add-day-btn, .download-btn, .clear-btn {
+      background: #1e88e5; color: white; border: none; padding: 12px;
+      width: 100%; border-radius: 40px; font-size: 1rem; font-weight: 600;
+      margin-top: 8px; cursor: pointer;
+    }
+    .download-btn { background: #2e7d32; }
+    .clear-btn { background: #c62828; }
+    .summary { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; }
+    .net-pay { font-size: 2rem; font-weight: bold; margin: 10px 0; }
+    .stats { display: flex; justify-content: space-between; margin-top: 10px; gap: 10px; }
+    .stat-card { background: rgba(255,255,255,0.1); border-radius: 16px; padding: 8px 12px; text-align: center; flex: 1; }
+    .date-picker-row { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
+    .date-picker-row input { flex: 2; padding: 10px; border-radius: 20px; border: 1px solid #ddd; }
+    .date-picker-row button { flex: 1; background: #1e88e5; color: white; border: none; border-radius: 30px; padding: 10px; cursor: pointer; }
+    .footer-note { text-align: center; font-size: 0.7rem; color: #888; margin-top: 20px; }
+    button { cursor: pointer; }
+    .test-btn { background: #4caf50; margin-top: 5px; padding: 8px; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <div class="title">⚙️ அமைப்புகள் (SGD)</div>
+    <div class="settings">
+      <div class="setting-item"><label>💰 அடிப்படை சம்பளம் / நாள்</label><input type="number" id="baseSalary" step="0.01" value="28.00"></div>
+      <div class="setting-item"><label>⏱️ OT வீதம் / மணி</label><input type="number" id="otRate" step="0.01" value="5.73"></div>
+      <div class="setting-item"><label>🍽️ இரவு உணவுத் தொகை / நாள்</label><input type="number" id="mealAmount" step="0.01" value="3.50"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="title">📅 வேலை செய்த நாட்கள்</div>
+    
+    <div class="date-picker-row">
+      <input type="date" id="quickDate">
+      <button id="quickAddBtn">+ சேர்</button>
+    </div>
+    
+    <div id="daysContainer"></div>
+    <button class="add-day-btn" id="addDayBtn">+ புதிய நாள் சேர்க்க</button>
+    <button class="clear-btn" id="clearAllBtn">🗑️ அனைத்தையும் நீக்கு</button>
+  </div>
+
+  <div class="card summary">
+    <div class="title">📊 மொத்த சம்பளம்</div>
+    <div class="net-pay" id="netPayDisplay">SGD 0.00</div>
+    <div class="stats">
+      <div class="stat-card"><div>மொத்த நாட்கள்</div><strong id="totalDaysCount">0</strong></div>
+      <div class="stat-card"><div>மொத்த OT மணி</div><strong id="totalOTHours">0.0</strong></div>
+      <div class="stat-card"><div>மாத மதிப்பீடு</div><strong id="monthlyEstimate">SGD 0</strong></div>
+    </div>
+    <div class="breakdown" id="breakdownInfo" style="font-size:0.75rem; margin-top:12px;"></div>
+  </div>
+
+  <button class="download-btn" id="downloadBtn">📥 PDF ஆக சேமி</button>
+  <div class="footer-note">📐 (அடிப்படை × நாட்கள்) + (OT × வீதம்) + (உணவு × நாட்கள்)</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+  // Simple, no service worker, no complex PWA
+  (function() {
+    console.log("App Started");
+    
+    let workDays = [];
+    
+    // Load data
+    function loadData() {
+      try {
+        const saved = localStorage.getItem('salary_data_simple');
+        if(saved && saved !== 'undefined') {
+          workDays = JSON.parse(saved);
+        }
+        if(!workDays || workDays.length === 0) {
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(today.getDate() - 1);
+          workDays = [
+            { id: Date.now(), date: today.toISOString().split('T')[0], otHours: 4, hasMeal: true },
+            { id: Date.now()+1, date: yesterday.toISOString().split('T')[0], otHours: 2, hasMeal: false }
+          ];
+        }
+        
+        const base = localStorage.getItem('base_salary_simple');
+        const ot = localStorage.getItem('ot_rate_simple');
+        const meal = localStorage.getItem('meal_amount_simple');
+        if(base) document.getElementById('baseSalary').value = parseFloat(base).toFixed(2);
+        if(ot) document.getElementById('otRate').value = parseFloat(ot).toFixed(2);
+        if(meal) document.getElementById('mealAmount').value = parseFloat(meal).toFixed(2);
+      } catch(e) { console.error(e); }
+    }
+    
+    function saveData() {
+      try {
+        localStorage.setItem('salary_data_simple', JSON.stringify(workDays));
+        localStorage.setItem('base_salary_simple', document.getElementById('baseSalary').value);
+        localStorage.setItem('ot_rate_simple', document.getElementById('otRate').value);
+        localStorage.setItem('meal_amount_simple', document.getElementById('mealAmount').value);
+      } catch(e) { console.error(e); }
+    }
+    
+    function formatDate(dateStr) {
+      if(!dateStr) return 'No date';
+      try {
+        const d = new Date(dateStr);
+        return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+      } catch(e) { return dateStr; }
+    }
+    
+    function calculate() {
+      const basePerDay = parseFloat(document.getElementById('baseSalary').value) || 0;
+      const otPerHour = parseFloat(document.getElementById('otRate').value) || 0;
+      const mealAmount = parseFloat(document.getElementById('mealAmount').value) || 0;
+      
+      let totalBase = 0, totalOT = 0, totalMeal = 0, totalOtHours = 0;
+      
+      for(let i = 0; i < workDays.length; i++) {
+        const day = workDays[i];
+        totalBase += basePerDay;
+        const otH = parseFloat(day.otHours) || 0;
+        totalOtHours += otH;
+        totalOT += otH * otPerHour;
+        if(day.hasMeal) totalMeal += mealAmount;
+      }
+      
+      const netPay = totalBase + totalOT + totalMeal;
+      const monthlyEstimate = workDays.length > 0 ? (netPay / workDays.length) * 30 : 0;
+      
+      document.getElementById('netPayDisplay').innerHTML = `SGD ${netPay.toFixed(2)}`;
+      document.getElementById('totalDaysCount').innerText = workDays.length;
+      document.getElementById('totalOTHours').innerText = totalOtHours.toFixed(1);
+      document.getElementById('monthlyEstimate').innerHTML = `SGD ${monthlyEstimate.toFixed(2)}`;
+      document.getElementById('breakdownInfo').innerHTML = `Base: SGD ${totalBase.toFixed(2)} + OT: SGD ${totalOT.toFixed(2)} + Meal: SGD ${totalMeal.toFixed(2)} = SGD ${netPay.toFixed(2)}`;
+    }
+    
+    function renderDays() {
+      const container = document.getElementById('daysContainer');
+      if(!container) return;
+      container.innerHTML = '';
+      
+      if(workDays.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:#888;">✨ நாட்கள் இல்லை. + சேர்க்கவும்</div>';
+        return;
+      }
+      
+      const sorted = [...workDays].sort((a,b) => new Date(b.date) - new Date(a.date));
+      
+      for(let i = 0; i < sorted.length; i++) {
+        const day = sorted[i];
+        const div = document.createElement('div');
+        div.className = 'day-item';
+        div.innerHTML = `
+          <div class="day-header">
+            <span class="day-date">📅 ${formatDate(day.date)}</span>
+            <button class="remove-day" data-id="${day.id}">🗑️ நீக்கு</button>
+          </div>
+          <div class="day-controls">
+            <div class="ot-control"><span>⏱️ OT (hours)</span><input type="number" step="0.5" value="${day.otHours}" class="ot-input" data-id="${day.id}"></div>
+            <div class="food-control"><span>🍽️ இரவு உணவு (+${document.getElementById('mealAmount').value})</span><input type="checkbox" class="meal-checkbox" data-id="${day.id}" ${day.hasMeal ? 'checked' : ''}></div>
+          </div>
+        `;
+        container.appendChild(div);
+      }
+      
+      // Remove buttons
+      document.querySelectorAll('.remove-day').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = btn.getAttribute('data-id');
+          workDays = workDays.filter(d => d.id != id);
+          saveData();
+          renderDays();
+          calculate();
+        });
+      });
+      
+      // OT inputs
+      document.querySelectorAll('.ot-input').forEach(inp => {
+        inp.addEventListener('change', (e) => {
+          const id = inp.getAttribute('data-id');
+          const day = workDays.find(d => d.id == id);
+          if(day) {
+            day.otHours = parseFloat(inp.value) || 0;
+            saveData();
+            calculate();
+          }
+        });
+      });
+      
+      // Meal checkboxes
+      document.querySelectorAll('.meal-checkbox').forEach(chk => {
+        chk.addEventListener('change', (e) => {
+          const id = chk.getAttribute('data-id');
+          const day = workDays.find(d => d.id == id);
+          if(day) {
+            day.hasMeal = chk.checked;
+            saveData();
+            calculate();
+          }
+        });
+      });
+    }
+    
+    function addDay(dateStr) {
+      if(!dateStr) return false;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        alert("YYYY-MM-DD வடிவத்தில் மட்டும்");
+        return false;
+      }
+      const exists = workDays.some(d => d.date === dateStr);
+      if(exists) {
+        alert(`இந்த தேதி ${formatDate(dateStr)} ஏற்கனவே உள்ளது!`);
+        return false;
+      }
+      workDays.push({ id: Date.now() + Math.random(), date: dateStr, otHours: 0, hasMeal: false });
+      saveData();
+      renderDays();
+      calculate();
+      return true;
+    }
+    
+    function addNewDay() {
+      const today = new Date();
+      const defaultDate = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+      const dateStr = prompt("தேதி (YYYY-MM-DD):", defaultDate);
+      if(dateStr) addDay(dateStr);
+    }
+    
+    function clearAll() {
+      if(confirm("அனைத்து நாட்களையும் நீக்கவும்?")) {
+        workDays = [];
+        saveData();
+        renderDays();
+        calculate();
+      }
+    }
+    
+    function downloadPDF() {
+      const element = document.querySelector('.container').cloneNode(true);
+      const btns = element.querySelectorAll('.download-btn, .add-day-btn, .clear-btn');
+      btns.forEach(btn => btn.remove());
+      html2pdf().from(element).set({ margin: 0.5, filename: `salary_${new Date().toISOString().slice(0,10)}.pdf` }).save();
+    }
+    
+    function setTodayDate() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      document.getElementById('quickDate').value = `${yyyy}-${mm}-${dd}`;
+    }
+    
+    // Event bindings
+    document.getElementById('baseSalary').addEventListener('input', () => { saveData(); calculate(); });
+    document.getElementById('otRate').addEventListener('input', () => { saveData(); calculate(); });
+    document.getElementById('mealAmount').addEventListener('input', () => { saveData(); calculate(); renderDays(); });
+    document.getElementById('addDayBtn').onclick = addNewDay;
+    document.getElementById('clearAllBtn').onclick = clearAll;
+    document.getElementById('downloadBtn').onclick = downloadPDF;
+    document.getElementById('quickAddBtn').onclick = () => {
+      const dateStr = document.getElementById('quickDate').value;
+      if(dateStr) addDay(dateStr);
+      else alert("தேதியை தேர்வு செய்யவும்");
+    };
+    
+    // Initialize
+    loadData();
+    setTodayDate();
+    renderDays();
+    calculate();
+    console.log("App Ready - Simple version");
+  })();
+</script>
+</body>
+</html>
