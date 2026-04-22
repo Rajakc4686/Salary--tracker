@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>KC Salary Tracker • கேசியின் கணக்கு</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    :root {
+      --bg-dark: #0a0a1a;
+      --bg-card: rgba(18, 18, 35, 0.92);
+      --accent-cyan: #00d4ff;
+      --accent-green: #00e676;
+      --accent-gold: #ffd700;
+      --accent-pink: #ff6b9d;
+      --text-light: #eef2ff;
+      --border-glow: rgba(0, 212, 255, 0.25);
+      --day-added: linear-gradient(135deg, rgba(0,230,118,0.15), rgba(0,212,255,0.1));
+      --shadow-3d: 0 10px 25px -5px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,212,255,0.1);
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system;
+      background: radial-gradient(ellipse at 30% 20%, #12122e, #050510);
+      min-height: 100vh;
+      padding: 12px;
+      padding-bottom: 60px;
+      color: var(--text-light);
+    }
+    .container { max-width: 650px; margin: 0 auto; }
+    .card {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      border-radius: 28px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border-glow);
+      box-shadow: var(--shadow-3d);
+      transition: transform 0.2s;
+    }
+    .card:hover { transform: translateY(-2px); }
+    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    .title { 
+      font-size: 1.35rem; 
+      font-weight: 700; 
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-pink), var(--accent-gold));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -0.3px;
+    }
+    .subtitle {
+      font-size: 0.6rem;
+      color: var(--accent-pink);
+      margin-left: 8px;
+      letter-spacing: 0.5px;
+    }
+    .settings-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .setting-compact { flex: 1; min-width: 90px; }
+    .setting-compact label { font-size: 0.6rem; color: var(--accent-cyan); display: block; }
+    .setting-compact input { width: 100%; padding: 6px 8px; font-size: 0.8rem; background: rgba(255,255,255,0.08); border: 1px solid var(--border-glow); border-radius: 20px; color: white; }
+    .calendar-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .month-year { font-size: 1.1rem; font-weight: 600; color: var(--accent-gold); }
+    .nav-btn { background: rgba(0,212,255,0.15); border: none; padding: 6px 14px; border-radius: 30px; color: var(--accent-cyan); font-size: 0.75rem; cursor: pointer; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+    .cal-weekday { text-align: center; font-size: 0.65rem; color: var(--accent-cyan); padding: 6px 0; }
+    .cal-day { aspect-ratio: 1 / 1; background: rgba(255,255,255,0.04); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.8rem; cursor: pointer; transition: 0.15s; border: 1px solid transparent; }
+    .cal-day.added { background: var(--day-added); border-color: var(--accent-green); }
+    .cal-day.today { border-color: var(--accent-cyan); box-shadow: 0 0 0 2px rgba(0,212,255,0.4); }
+    .cal-day:hover { transform: scale(1.03); background: rgba(0,212,255,0.2); }
+    .ot-badge { font-size: 0.55rem; color: var(--accent-gold); margin-top: 2px; }
+    .today-work-badge { font-size: 0.55rem; color: var(--accent-green); font-weight: bold; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: var(--bg-card); border-radius: 28px; padding: 20px; width: 85%; max-width: 300px; border: 1px solid var(--accent-cyan); }
+    .modal-content input { width: 100%; padding: 10px; margin: 10px 0; border-radius: 24px; background: rgba(255,255,255,0.1); border: none; color: white; }
+    .modal-buttons { display: flex; gap: 10px; margin-top: 12px; }
+    .btn-save { background: #00e676; color: black; flex: 1; padding: 8px; border-radius: 40px; border: none; font-weight: bold; }
+    .btn-cancel { background: #c62828; color: white; flex: 1; padding: 8px; border-radius: 40px; border: none; }
+    .btn-sm { padding: 6px 12px; border-radius: 30px; font-size: 0.7rem; font-weight: 600; border: none; cursor: pointer; }
+    .btn-cyan { background: var(--accent-cyan); color: #000; }
+    .btn-green { background: #2e7d32; color: white; }
+    .btn-red { background: #c62828; color: white; }
+    .button-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .summary-row { display: flex; justify-content: space-between; gap: 8px; margin: 10px 0; flex-wrap: wrap; }
+    .stat-box { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 6px 10px; text-align: center; flex: 1; font-size: 0.7rem; }
+    .net-pay { font-size: 1.6rem; font-weight: 800; color: var(--accent-green); }
+    .footer-note { text-align: center; font-size: 0.6rem; opacity: 0.5; margin-top: 12px; }
+    .kc-brand { text-align: center; font-size: 0.55rem; margin-top: 8px; color: var(--accent-pink); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- Settings Card -->
+  <div class="card">
+    <div class="card-header">
+      <div class="title">💰 KC Salary Tracker <span class="subtitle">✦ கேசியின் சம்பள கணக்கு ✦</span></div>
+      <button class="btn-sm btn-cyan" id="darkToggleBtn">🌙 Dark</button>
+    </div>
+    <div class="settings-row">
+      <div class="setting-compact"><label>💰 அடிப்படை / நாள்</label><input type="number" id="baseSalary" step="0.01" value="28.00"></div>
+      <div class="setting-compact"><label>⏱️ OT வீதம் / மணி</label><input type="number" id="otRate" step="0.01" value="5.73"></div>
+      <div class="setting-compact"><label>🍽️ இரவு உணவு</label><input type="number" id="mealAmount" step="0.01" value="3.50"></div>
+    </div>
+  </div>
+
+  <!-- Calendar Card -->
+  <div class="card">
+    <div class="title">📅 வேலை நாட்கள்</div>
+    <div class="calendar-nav">
+      <button class="nav-btn" id="prevMonth">◀ முந்தைய</button>
+      <span class="month-year" id="monthYearDisplay">March 2026</span>
+      <button class="nav-btn" id="nextMonth">அடுத்த ▶</button>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+    <div class="footer-note">✨ தேதியை தொடவும் → OT & உணவு சேர்க்க | ✅ பச்சை = வேலை செய்த நாள்</div>
+  </div>
+
+  <!-- Summary Card -->
+  <div class="card">
+    <div class="title">📊 மொத்த சம்பளம்</div>
+    <div class="net-pay" id="netPayDisplay">SGD 0.00</div>
+    <div class="summary-row">
+      <div class="stat-box">📅 நாட்கள்: <strong id="totalDaysCount">0</strong></div>
+      <div class="stat-box">⏱️ OT மணி: <strong id="totalOTHours">0</strong></div>
+      <div class="stat-box">💰 OT தொகை: <strong id="totalOTPay">SGD 0</strong></div>
+      <div class="stat-box">📈 மதிப்பீடு: <strong id="monthlyEstimate">SGD 0</strong></div>
+    </div>
+    <div id="breakdownInfo" style="font-size:0.65rem; text-align:center; opacity:0.7;"></div>
+    
+    <div class="button-group">
+      <button class="btn-sm btn-green" id="exportDataBtn">📎 என் தரவுகளை பதிவிறக்கம் (CSV)</button>
+      <button class="btn-sm btn-red" id="clearAllBtn">🗑️ அனைத்தும் நீக்கு</button>
+    </div>
+  </div>
+  <div class="kc-brand">✨ KC Salary Tracker • கேசியின் நம்பிக்கைக்குரிய கணக்கு ✨</div>
+</div>
+
+<!-- Modal -->
+<div id="entryModal" class="modal">
+  <div class="modal-content">
+    <h3 id="modalDateTitle" style="font-size:1rem;">📅 தேதி</h3>
+    <input type="number" id="modalOtHours" step="0.5" placeholder="OT மணி நேரம்" value="0">
+    <label style="display:flex; gap:6px; align-items:center; margin:6px 0;">
+      <input type="checkbox" id="modalMealAllowance"> 🍽️ இரவு உணவு (+SGD <span id="mealAmountDisplay">3.50</span>)
+    </label>
+    <div class="modal-buttons">
+      <button class="btn-save" id="saveModalBtn">சேமி</button>
+      <button class="btn-cancel" id="cancelModalBtn">ரத்து</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    let workDays = [];
+    let currentDate = new Date();
+    let selectedDateStr = null;
+
+    function loadData() {
+      try {
+        const saved = localStorage.getItem('kc_salary_data');
+        if(saved) workDays = JSON.parse(saved);
+        if(!workDays || !workDays.length) {
+          const old = localStorage.getItem('bc_salary_data') || localStorage.getItem('salary_data_only');
+          if(old) workDays = JSON.parse(old);
+        }
+        if(!workDays) workDays = [];
+        workDays = workDays.map(d => ({
+          id: d.id || Date.now() + Math.random(),
+          date: d.date,
+          otHours: d.otHours || 0,
+          mealAllowance: d.mealAllowance !== undefined ? d.mealAllowance : (d.hasMeal || false)
+        }));
+        ['baseSalary','otRate','mealAmount'].forEach(id => {
+          let val = localStorage.getItem(`kc_${id}`);
+          if(val) document.getElementById(id).value = parseFloat(val).toFixed(2);
+        });
+      } catch(e) { workDays = []; }
+    }
+
+    function saveData() {
+      localStorage.setItem('kc_salary_data', JSON.stringify(workDays));
+      localStorage.setItem('kc_baseSalary', document.getElementById('baseSalary').value);
+      localStorage.setItem('kc_otRate', document.getElementById('otRate').value);
+      localStorage.setItem('kc_mealAmount', document.getElementById('mealAmount').value);
+    }
+
+    function calculate() {
+      let base = +document.getElementById('baseSalary').value || 0;
+      let otRate = +document.getElementById('otRate').value || 0;
+      let mealAmt = +document.getElementById('mealAmount').value || 0;
+      let totalBase = 0, totalOT = 0, totalMeal = 0, totalOtHrs = 0;
+      for(let d of workDays) {
+        totalBase += base;
+        let oh = +d.otHours || 0;
+        totalOtHrs += oh;
+        totalOT += oh * otRate;
+        if(d.mealAllowance) totalMeal += mealAmt;
+      }
+      let net = totalBase + totalOT + totalMeal;
+      let monthly = workDays.length ? (net / workDays.length) * 30 : 0;
+      document.getElementById('netPayDisplay').innerHTML = `SGD ${net.toFixed(2)}`;
+      document.getElementById('totalDaysCount').innerText = workDays.length;
+      document.getElementById('totalOTHours').innerText = totalOtHrs.toFixed(1);
+      document.getElementById('totalOTPay').innerHTML = `SGD ${totalOT.toFixed(2)}`;
+      document.getElementById('monthlyEstimate').innerHTML = `SGD ${monthly.toFixed(2)}`;
+      document.getElementById('breakdownInfo').innerHTML = `அடிப்படை: SGD ${totalBase.toFixed(2)} + OT: ${totalOT.toFixed(2)} + உணவு: ${totalMeal.toFixed(2)} = SGD ${net.toFixed(2)}`;
+    }
+
+    function renderCalendar() {
+      let y = currentDate.getFullYear(), m = currentDate.getMonth();
+      let firstDay = new Date(y, m, 1);
+      let daysInMonth = new Date(y, m+1, 0).getDate();
+      let startWeekday = firstDay.getDay();
+      document.getElementById('monthYearDisplay').innerText = firstDay.toLocaleDateString('ta-IN', { month:'long', year:'numeric' });
+      let grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+      ['ஞா','தி','செ','பு','வி','வெ','ச'].forEach(d => { let wd = document.createElement('div'); wd.className = 'cal-weekday'; wd.innerText = d; grid.appendChild(wd); });
+      for(let i=0; i<startWeekday; i++) { let e = document.createElement('div'); e.className = 'empty-day'; grid.appendChild(e); }
+      let todayStr = new Date().toISOString().split('T')[0];
+      for(let d=1; d<=daysInMonth; d++) {
+        let dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        let dayData = workDays.find(w => w.date === dateStr);
+        let cell = document.createElement('div');
+        cell.className = 'cal-day';
+        if(dayData) cell.classList.add('added');
+        if(dateStr === todayStr) cell.classList.add('today');
+        let todayWorkHtml = '';
+        if(dateStr === todayStr && dayData && dayData.otHours > 0) todayWorkHtml = `<div class="today-work-badge">✅ ${dayData.otHours}h</div>`;
+        else if(dateStr === todayStr && !dayData) todayWorkHtml = `<div class="today-work-badge">⚡ 0h</div>`;
+        cell.innerHTML = `<div>${d}</div>${dayData && dayData.otHours ? `<div class="ot-badge">⚡${dayData.otHours}h</div>` : ''}${todayWorkHtml}`;
+        cell.onclick = (function(ds) { return () => openModal(ds); })(dateStr);
+        grid.appendChild(cell);
+      }
+    }
+
+    function openModal(dateStr) {
+      selectedDateStr = dateStr;
+      let ex = workDays.find(d => d.date === dateStr);
+      document.getElementById('modalDateTitle').innerText = `📅 ${dateStr}`;
+      document.getElementById('modalOtHours').value = ex ? ex.otHours : 0;
+      document.getElementById('modalMealAllowance').checked = ex ? ex.mealAllowance : false;
+      document.getElementById('mealAmountDisplay').innerText = parseFloat(document.getElementById('mealAmount').value).toFixed(2);
+      document.getElementById('entryModal').style.display = 'flex';
+    }
+
+    function saveModal() {
+      if(!selectedDateStr) return;
+      let ot = +document.getElementById('modalOtHours').value || 0;
+      let meal = document.getElementById('modalMealAllowance').checked;
+      let idx = workDays.findIndex(d => d.date === selectedDateStr);
+      if(idx !== -1) { workDays[idx].otHours = ot; workDays[idx].mealAllowance = meal; }
+      else { workDays.push({ id: Date.now(), date: selectedDateStr, otHours: ot, mealAllowance: meal }); }
+      saveData();
+      renderCalendar();
+      calculate();
+      document.getElementById('entryModal').style.display = 'none';
+    }
+
+    function exportDataOnly() {
+      let rows = [["தேதி", "OT மணி", "உணவு அனுமதி"]];
+      for(let d of workDays) {
+        rows.push([d.date, d.otHours, d.mealAllowance ? "ஆம்" : "இல்லை"]);
+      }
+      let csvContent = rows.map(row => row.join(",")).join("\n");
+      let blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      let link = document.createElement('a');
+      let url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `KC_salary_data_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function clearAll() {
+      if(confirm("⚠️ அனைத்து நாட்களையும் நீக்கவும்? (உங்கள் தரவுகள் CSV ஆக சேமிக்கப்பட்டிருக்கும்)")) {
+        workDays = [];
+        saveData();
+        renderCalendar();
+        calculate();
+      }
+    }
+
+    // Events
+    document.getElementById('prevMonth').onclick = () => { currentDate.setMonth(currentDate.getMonth()-1); renderCalendar(); };
+    document.getElementById('nextMonth').onclick = () => { currentDate.setMonth(currentDate.getMonth()+1); renderCalendar(); };
+    document.getElementById('saveModalBtn').onclick = saveModal;
+    document.getElementById('cancelModalBtn').onclick = () => document.getElementById('entryModal').style.display = 'none';
+    document.getElementById('exportDataBtn').onclick = exportDataOnly;
+    document.getElementById('clearAllBtn').onclick = clearAll;
+    document.getElementById('baseSalary').addEventListener('input', () => { saveData(); calculate(); });
+    document.getElementById('otRate').addEventListener('input', () => { saveData(); calculate(); });
+    document.getElementById('mealAmount').addEventListener('input', () => { saveData(); calculate(); renderCalendar(); });
+    
+    let dark = true;
+    document.getElementById('darkToggleBtn').onclick = () => {
+      document.body.style.background = dark ? '#f0f2f5' : 'radial-gradient(ellipse at 30% 20%, #12122e, #050510)';
+      dark = !dark;
+    };
+    
+    loadData();
+    renderCalendar();
+    calculate();
+    console.log("✅ KC Salary Tracker Ready - கேசியின் சம்பள கணக்கு");
+  })();
+</script>
+</body>
+</html>
